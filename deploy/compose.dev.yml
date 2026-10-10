@@ -1,0 +1,20 @@
+services:
+
+  backend:
+    container_name: backend
+    build:
+      context: ../backend/
+      dockerfile: ../deploy/dev.Dockerfile
+    env_file:
+      - ../config/backend.env
+      - ../config/valkey.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    volumes:
+      - ../backend:/app
+    restart: on-failure

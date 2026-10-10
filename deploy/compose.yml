@@ -1,0 +1,49 @@
+services:
+
+  backend:
+    container_name: backend
+    build:
+      context: ../backend/
+      dockerfile: ../deploy/prod.Dockerfile
+    env_file:
+      - ../config/postgres.env
+      - ../config/valkey.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    container_name: postgres
+    image: postgres:18-alpine
+    env_file:
+      - ../config/postgres.env
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+    restart: unless-stopped
+
+  valkey:
+    container_name: valkey
+    image: valkey/valkey:9-alpine
+    env_file:
+      - ../config/valkey.env
+    command: valkey-server --requirepass ${VALKEY_PASSWORD:-secret}
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-a", "${VALKEY_PASSWORD:-secret}", "ping"]
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  valkey_data:
